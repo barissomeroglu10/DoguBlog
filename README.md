@@ -1,6 +1,6 @@
-# StellarHack 🚀
+# Doğu Blog 🚀
 
-A modern, responsive social media platform built with React and Firebase. StellarHack provides users with a seamless experience to share posts, connect with others, and manage their profiles in real-time.
+A modern, responsive social media platform built with React and Firebase. Doğu Blog provides users with a seamless experience to share posts, connect with others, and manage their profiles in real-time.
 
 ## ✨ Features
 
@@ -33,8 +33,8 @@ A modern, responsive social media platform built with React and Firebase. Stella
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/StellarHack.git
-   cd StellarHack
+   git clone https://github.com/yourusername/DoguBlog.git
+   cd DoguBlog
    ```
 
 2. **Install dependencies**
@@ -68,7 +68,7 @@ A modern, responsive social media platform built with React and Firebase. Stella
 ## 🏗️ Project Structure
 
 ```
-StellarHack/
+DoguBlog/
 ├── public/
 │   └── index.html
 ├── src/
@@ -145,11 +145,18 @@ This project can be easily deployed to various platforms:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👨‍💻 Author
+## 👨‍💻 Authors
 
-**Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
+**Barış Someroğlu**
+- GitHub: [@barissomeroglu10](https://github.com/barissomeroglu10)
+- LinkedIn: [Barış Someroğlu](https://www.linkedin.com/in/barissomeroglu)
+
+**Furkan Aslan**
+- GitHub: [@FurkanAslan6565](https://github.com/FurkanAslan6565)
+- LinkedIn: [Furkan Aslan](https://www.linkedin.com/in/furkanaslan6565/)
+
+**Hüseyin Emre Gülmez**
+- GitHub: [@HEGulmez](https://github.com/HEGulmez)
 
 ## 🙏 Acknowledgments
 
