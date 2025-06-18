@@ -1,6 +1,6 @@
 # Doğu Blog 🚀
 
-A modern, responsive social media platform built with React and Firebase. Doğu Blog provides users with a seamless experience to share posts, connect with others, and manage their profiles in real-time.
+A modern, responsive blog platform built with React and Firebase. Doğu Blog provides users with a seamless experience to share posts, connect with others, and manage their profiles in real-time.
 
 ## ✨ Features
 
