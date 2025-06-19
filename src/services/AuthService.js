@@ -92,8 +92,8 @@ class AuthService {
         message: 'Account created successfully. Please check your email for verification.'
       };
     } catch (error) {
-      console.error('Registration error:', error);
-      throw new Error(this.getErrorMessage(error.code));
+      console.error('Registration error:', error, error.code, error.message);
+      throw new Error(this.getErrorMessage(error.code) || error.message || 'An unexpected error occurred');
     }
   }
 
@@ -384,4 +384,5 @@ class AuthService {
 }
 
 // Export singleton instance
-export default new AuthService(); 
+const authService = new AuthService();
+export default authService; 
