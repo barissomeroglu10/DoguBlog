@@ -55,10 +55,10 @@ const Profile = () => {
 
   useEffect(() => {
     const fetchMyPosts = async () => {
-      if (!currentUser) return;
+      if (!userData || !userData.uid) return;
       setLoadingPosts(true);
       try {
-        const result = await PostService.getPosts({ authorId: currentUser.uid });
+        const result = await PostService.getPosts({ author: userData.username });
         setMyPosts(result.posts || []);
       } catch (err) {
         setMyPosts([]);
@@ -67,7 +67,7 @@ const Profile = () => {
       }
     };
     fetchMyPosts();
-  }, [currentUser]);
+  }, [userData]);
 
   // İstatistikler
   const stats = {
