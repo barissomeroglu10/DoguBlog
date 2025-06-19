@@ -1,44 +1,190 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import PostService from '../services/PostService';
 
 const PostDetail = () => {
-  const [liked, setLiked] = useState(false);
-  const [comments, setComments] = useState([
-    {
-      id: 1,
-      author: 'Emily Watson',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-1.2.1',
-      content: 'Great article! Really helped me understand the concepts better.',
-      date: '2 hours ago',
-      likes: 5
-    },
-    {
-      id: 2,
-      author: 'Michael Brown',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1',
-      content: 'Thanks for sharing this. The examples were very practical.',
-      date: '4 hours ago',
-      likes: 3
-    }
-  ]);
-
+  const [post, setPost] = useState(null);
+  const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [liked, setLiked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [submittingComment, setSubmittingComment] = useState(false);
+  
+  const { id } = useParams();
+  const { currentUser, userData } = useAuth();
+  const navigate = useNavigate();
 
-  const handleCommentSubmit = (e) => {
-    e.preventDefault();
-    if (newComment.trim()) {
-      const comment = {
-        id: comments.length + 1,
-        author: 'You',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1',
-        content: newComment,
-        date: 'just now',
-        likes: 0
-      };
-      setComments([...comments, comment]);
-      setNewComment('');
+  useEffect(() => {
+    if (id) {
+      loadPost();
+      loadComments();
+    }
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadPost = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const result = await PostService.getPost(id);
+      
+      if (result.success) {
+        setPost(result.post);
+        // Check if user has liked/bookmarked this post
+        if (currentUser) {
+          // You can implement these checks if needed
+          // setLiked(await PostService.hasUserLiked(id));
+          // setBookmarked(await PostService.hasUserBookmarked(id));
+        }
+      }
+    } catch (error) {
+      setError('Failed to load post: ' + error.message);
+      console.error('Load post error:', error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const loadComments = async () => {
+    try {
+      const result = await PostService.getComments(id, {
+        limit: 50,
+        orderByField: 'createdAt',
+        orderDirection: 'desc'
+      });
+      
+      if (result.success) {
+        setComments(result.comments);
+      }
+    } catch (error) {
+      console.error('Load comments error:', error);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const result = await PostService.toggleLike(id);
+      if (result.success) {
+        setLiked(!liked);
+        // Update post stats
+        setPost(prev => ({
+          ...prev,
+          stats: {
+            ...prev.stats,
+            likes: liked ? prev.stats.likes - 1 : prev.stats.likes + 1
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Like error:', error);
+    }
+  };
+
+  const handleBookmark = async () => {
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const result = await PostService.toggleBookmark(id);
+      if (result.success) {
+        setBookmarked(!bookmarked);
+      }
+    } catch (error) {
+      console.error('Bookmark error:', error);
+    }
+  };
+
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
+    if (!newComment.trim()) return;
+
+    try {
+      setSubmittingComment(true);
+      const result = await PostService.addComment(id, newComment);
+      
+      if (result.success) {
+      setNewComment('');
+        // Reload comments
+        loadComments();
+        // Update post stats
+        setPost(prev => ({
+          ...prev,
+          stats: {
+            ...prev.stats,
+            comments: prev.stats.comments + 1
+    }
+        }));
+      }
+    } catch (error) {
+      console.error('Comment error:', error);
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  const formatRelativeTime = (timestamp) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    
+    return formatDate(timestamp);
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !post) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex justify-center items-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Post Not Found</h1>
+          <p className="text-gray-600 mb-6">{error || 'The post you are looking for does not exist.'}</p>
+          <Link 
+            to="/homepage"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+          >
+            Go Back Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -47,7 +193,7 @@ const PostDetail = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link to="/homepage" className="text-2xl font-bold text-gray-900">StellarHack</Link>
+              <Link to="/homepage" className="text-2xl font-bold text-gray-900">DoguBlog</Link>
             </div>
             <div className="flex-1 max-w-lg mx-8">
               <div className="relative">
@@ -71,8 +217,12 @@ const PostDetail = () => {
                 Write
               </Link>
               <div className="relative">
-                <Link to="/profile" className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 hover:ring-indigo-600 transition duration-200">
-                  <img className="h-8 w-8 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Profile" />
+                <Link to="/profile">
+                  <img 
+                    className="h-8 w-8 rounded-full cursor-pointer" 
+                    src={userData?.photoURL || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} 
+                    alt="Profile" 
+                  />
                 </Link>
               </div>
             </div>
@@ -85,21 +235,29 @@ const PostDetail = () => {
         {/* Article Header */}
         <header className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4 leading-tight">
-            The Future of Web Development: What to Expect in 2024
+            {post.title}
           </h1>
           
           {/* Author Info */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
-              <Link to="/profile">
-                <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-1.2.1" alt="Author" className="h-12 w-12 rounded-full" />
+              <Link to={`/profile/${post.author.username}`}>
+                <img 
+                  src={post.author.photoURL || "https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-1.2.1"} 
+                  alt={post.author.fullName} 
+                  className="h-12 w-12 rounded-full" 
+                />
               </Link>
               <div className="ml-4">
-                <Link to="/profile" className="text-lg font-semibold text-gray-900 hover:text-indigo-600">Sarah Chen</Link>
+                <Link to={`/profile/${post.author.username}`} className="text-lg font-semibold text-gray-900 hover:text-indigo-600">
+                  {post.author.fullName || post.author.username}
+                </Link>
                 <div className="flex items-center text-sm text-gray-500">
-                  <span>Dec 15, 2023</span>
+                  <span>{formatDate(post.createdAt)}</span>
                   <span className="mx-2">•</span>
-                  <span>5 min read</span>
+                  <span>{post.readTime || '5'} min read</span>
+                  <span className="mx-2">•</span>
+                  <span>{post.stats?.views || 0} views</span>
                 </div>
               </div>
             </div>
@@ -110,64 +268,44 @@ const PostDetail = () => {
           </div>
 
           {/* Tags */}
+          {post.tags && post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
-            <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 rounded-full">Technology</span>
-            <span className="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-full">Web Development</span>
-            <span className="px-3 py-1 text-sm font-medium bg-purple-100 text-purple-800 rounded-full">Frontend</span>
+              {post.tags.map((tag, index) => (
+                <span 
+                  key={index}
+                  className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 rounded-full"
+                >
+                  {tag}
+                </span>
+              ))}
           </div>
+          )}
         </header>
 
         {/* Featured Image */}
+        {post.imageUrls && post.imageUrls.length > 0 && (
         <div className="mb-8">
           <img 
-            src="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3" 
-            alt="Featured" 
+              src={post.imageUrls[0]} 
+              alt={post.title} 
             className="w-full h-80 object-cover rounded-xl"
           />
         </div>
+        )}
 
         {/* Article Content */}
         <div className="prose prose-lg max-w-none mb-8">
-          <p className="text-lg text-gray-700 leading-relaxed mb-6">
-            The web development landscape is constantly evolving, and 2024 promises to bring exciting new changes that will reshape how we build and interact with web applications. From new frameworks to revolutionary development approaches, let's explore what's on the horizon.
-          </p>
-
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">The Rise of Edge Computing</h2>
-          <p className="text-gray-700 leading-relaxed mb-6">
-            Edge computing is moving from a buzzword to a practical reality. With services like Cloudflare Workers, Vercel Edge Functions, and Deno Deploy, developers can now run server-side code closer to their users than ever before. This shift is particularly important for performance-critical applications and global user bases.
-          </p>
-
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">AI-Powered Development Tools</h2>
-          <p className="text-gray-700 leading-relaxed mb-6">
-            GitHub Copilot was just the beginning. We're seeing a new generation of AI-powered development tools that can generate entire components, write tests, and even refactor legacy code. These tools are becoming more sophisticated and integrated into our daily workflows.
-          </p>
-
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">The Evolution of React and Modern Frameworks</h2>
-          <p className="text-gray-700 leading-relaxed mb-6">
-            React Server Components are gaining traction, while frameworks like Next.js, Remix, and SvelteKit are pushing the boundaries of what's possible with modern web applications. The focus is shifting towards better performance, developer experience, and more intuitive APIs.
-          </p>
-
-          <blockquote className="border-l-4 border-indigo-500 pl-6 py-4 my-6 bg-gray-50 rounded-r-lg">
-            <p className="text-lg text-gray-700 italic">
-              "The future of web development isn't just about new technologies—it's about creating better experiences for both developers and users."
-            </p>
-          </blockquote>
-
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">WebAssembly Goes Mainstream</h2>
-          <p className="text-gray-700 leading-relaxed mb-6">
-            WebAssembly (WASM) is finally finding its place in mainstream web development. From running complex calculations in the browser to porting desktop applications to the web, WASM is opening up new possibilities that were previously unimaginable.
-          </p>
-
-          <p className="text-gray-700 leading-relaxed">
-            As we move forward into 2024, the key will be balancing innovation with practicality. The tools and technologies that succeed will be those that not only push the envelope but also solve real problems for developers and users alike.
-          </p>
+          <div 
+            className="text-lg text-gray-700 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br/>') }}
+          />
         </div>
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between py-8 border-t border-b border-gray-200 mb-8">
           <div className="flex items-center space-x-6">
             <button 
-              onClick={() => setLiked(!liked)}
+              onClick={handleLike}
               className={`flex items-center space-x-2 px-4 py-2 rounded-full transition duration-200 ${
                 liked ? 'bg-red-50 text-red-600' : 'hover:bg-gray-50 text-gray-600'
               }`}
@@ -175,14 +313,26 @@ const PostDetail = () => {
               <svg className="w-5 h-5" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
               </svg>
-              <span>{liked ? '125' : '124'}</span>
+              <span>{post.stats?.likes || 0}</span>
             </button>
             
             <button className="flex items-center space-x-2 px-4 py-2 rounded-full hover:bg-gray-50 text-gray-600 transition duration-200">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.418 8-8 8a9.954 9.954 0 01-4.536-1.089l-5.335 1.344a1 1 0 01-1.242-1.242l1.344-5.335A9.954 9.954 0 013 12c0-4.418 4.418-8 8-8s8 3.582 8 8z"></path>
               </svg>
-              <span>{comments.length}</span>
+              <span>{post.stats?.comments || comments.length}</span>
+            </button>
+            
+            <button 
+              onClick={handleBookmark}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full transition duration-200 ${
+                bookmarked ? 'bg-yellow-50 text-yellow-600' : 'hover:bg-gray-50 text-gray-600'
+              }`}
+            >
+              <svg className="w-5 h-5" fill={bookmarked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+              </svg>
+              <span>Bookmark</span>
             </button>
             
             <button className="flex items-center space-x-2 px-4 py-2 rounded-full hover:bg-gray-50 text-gray-600 transition duration-200">
@@ -202,100 +352,84 @@ const PostDetail = () => {
         </div>
 
         {/* Comments Section */}
-        <section className="mb-8">
+        {post.allowComments && (
+          <div className="mb-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-6">Comments ({comments.length})</h3>
           
           {/* Comment Form */}
+            {currentUser ? (
           <form onSubmit={handleCommentSubmit} className="mb-8">
-            <div className="flex space-x-4">
-              <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1" alt="Your avatar" className="h-10 w-10 rounded-full" />
+                <div className="flex items-start space-x-4">
+                  <img 
+                    src={userData?.photoURL || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1"} 
+                    alt="Your avatar" 
+                    className="h-10 w-10 rounded-full" 
+                  />
               <div className="flex-1">
                 <textarea 
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Share your thoughts..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 outline-none resize-none"
+                      placeholder="Write a comment..."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
                   rows="3"
-                ></textarea>
-                <div className="flex justify-end mt-3">
+                    />
+                    <div className="flex justify-end mt-2">
                   <button 
                     type="submit"
-                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-200"
+                        disabled={submittingComment || !newComment.trim()}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
                   >
-                    Post Comment
+                        {submittingComment ? 'Posting...' : 'Post Comment'}
                   </button>
                 </div>
               </div>
             </div>
           </form>
+            ) : (
+              <div className="mb-8 p-4 bg-gray-50 rounded-lg text-center">
+                <p className="text-gray-600 mb-2">Please log in to leave a comment.</p>
+                <Link 
+                  to="/login"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  Log In
+                </Link>
+              </div>
+            )}
 
           {/* Comments List */}
           <div className="space-y-6">
             {comments.map((comment) => (
               <div key={comment.id} className="flex space-x-4">
-                <img src={comment.avatar} alt={comment.author} className="h-10 w-10 rounded-full" />
+                  <img 
+                    src={comment.author.photoURL || "https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-1.2.1"} 
+                    alt={comment.author.fullName} 
+                    className="h-10 w-10 rounded-full" 
+                  />
                 <div className="flex-1">
-                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="bg-white rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-gray-900">{comment.author}</h4>
-                      <span className="text-sm text-gray-500">{comment.date}</span>
+                        <span className="font-medium text-gray-900">
+                          {comment.author.fullName || comment.author.username}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {formatRelativeTime(comment.createdAt)}
+                        </span>
                     </div>
                     <p className="text-gray-700">{comment.content}</p>
-                  </div>
-                  <div className="flex items-center mt-2 space-x-4">
-                    <button className="flex items-center space-x-1 text-sm text-gray-500 hover:text-red-600 transition duration-200">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                      </svg>
-                      <span>{comment.likes}</span>
-                    </button>
-                    <button className="text-sm text-gray-500 hover:text-indigo-600 transition duration-200">
-                      Reply
-                    </button>
                   </div>
                 </div>
               </div>
             ))}
-          </div>
-        </section>
-
-        {/* Related Articles */}
-        <section>
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">More from Sarah Chen</h3>
-          <div className="grid md:grid-cols-2 gap-6">
-            <Link to="/postdetail" className="block group">
-              <article className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition duration-200">
-                <h4 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-indigo-600">
-                  Understanding React Server Components
-                </h4>
-                <p className="text-gray-600 text-sm mb-3">
-                  A deep dive into React's newest feature and how it changes the game...
-                </p>
-                <div className="flex items-center text-xs text-gray-500">
-                  <span>Dec 10, 2023</span>
-                  <span className="mx-2">•</span>
-                  <span>7 min read</span>
+              
+              {comments.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No comments yet. Be the first to comment!</p>
                 </div>
-              </article>
-            </Link>
-            
-            <Link to="/postdetail" className="block group">
-              <article className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition duration-200">
-                <h4 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-indigo-600">
-                  Building Performant APIs with Node.js
-                </h4>
-                <p className="text-gray-600 text-sm mb-3">
-                  Best practices for creating fast and scalable backend services...
-                </p>
-                <div className="flex items-center text-xs text-gray-500">
-                  <span>Dec 8, 2023</span>
-                  <span className="mx-2">•</span>
-                  <span>10 min read</span>
+              )}
                 </div>
-              </article>
-            </Link>
           </div>
-        </section>
+        )}
       </article>
     </div>
   );

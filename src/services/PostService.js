@@ -12,8 +12,6 @@ import {
   limit, 
   startAfter,
   increment,
-  arrayUnion,
-  arrayRemove,
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
@@ -519,7 +517,6 @@ class PostService {
         limit: limitCount = 10,
         tags = [],
         author = null,
-        dateRange = null
       } = options;
 
       // This is a simplified search - in production, you'd use Algolia or Elasticsearch
@@ -737,5 +734,5 @@ class PostService {
   }
 }
 
-// Export singleton instance
-export default new PostService(); 
+const postService = new PostService();
+export default postService; 

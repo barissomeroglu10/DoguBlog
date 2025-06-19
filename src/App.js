@@ -11,6 +11,8 @@ import EditProfile from './components/EditProfile';
 import Search from './components/Search';
 import NotFound from './components/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
+import TestAuth from './components/TestAuth';
+import ForgotPassword from './components/ForgotPassword';
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
             <Route path="/" element={<Homepage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/test-auth" element={<TestAuth />} />
             <Route path="/homepage" element={<Homepage />} />
             <Route path="/createpost" element={
               <ProtectedRoute>
@@ -29,14 +32,23 @@ function App() {
             } />
             <Route path="/postdetail" element={<PostDetail />} />
             <Route path="/post/:id" element={<PostDetail />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/profile/:username" element={<Profile />} />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile/:username" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
             <Route path="/editprofile" element={
               <ProtectedRoute>
                 <EditProfile />
               </ProtectedRoute>
             } />
             <Route path="/search" element={<Search />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
