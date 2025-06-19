@@ -118,7 +118,7 @@ const PostDetail = () => {
       const result = await PostService.addComment(id, newComment);
       
       if (result.success) {
-        setNewComment('');
+      setNewComment('');
         // Reload comments
         loadComments();
         // Update post stats
@@ -127,7 +127,7 @@ const PostDetail = () => {
           stats: {
             ...prev.stats,
             comments: prev.stats.comments + 1
-          }
+    }
         }));
       }
     } catch (error) {
@@ -269,7 +269,7 @@ const PostDetail = () => {
 
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex flex-wrap gap-2 mb-6">
               {post.tags.map((tag, index) => (
                 <span 
                   key={index}
@@ -278,19 +278,19 @@ const PostDetail = () => {
                   {tag}
                 </span>
               ))}
-            </div>
+          </div>
           )}
         </header>
 
         {/* Featured Image */}
         {post.imageUrls && post.imageUrls.length > 0 && (
-          <div className="mb-8">
-            <img 
+        <div className="mb-8">
+          <img 
               src={post.imageUrls[0]} 
               alt={post.title} 
-              className="w-full h-80 object-cover rounded-xl"
-            />
-          </div>
+            className="w-full h-80 object-cover rounded-xl"
+          />
+        </div>
         )}
 
         {/* Article Content */}
@@ -354,37 +354,37 @@ const PostDetail = () => {
         {/* Comments Section */}
         {post.allowComments && (
           <div className="mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Comments ({comments.length})</h3>
-            
-            {/* Comment Form */}
+          <h3 className="text-2xl font-bold text-gray-900 mb-6">Comments ({comments.length})</h3>
+          
+          {/* Comment Form */}
             {currentUser ? (
-              <form onSubmit={handleCommentSubmit} className="mb-8">
+          <form onSubmit={handleCommentSubmit} className="mb-8">
                 <div className="flex items-start space-x-4">
                   <img 
                     src={userData?.photoURL || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1"} 
                     alt="Your avatar" 
                     className="h-10 w-10 rounded-full" 
                   />
-                  <div className="flex-1">
-                    <textarea
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
+              <div className="flex-1">
+                <textarea 
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
                       placeholder="Write a comment..."
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
-                      rows="3"
+                  rows="3"
                     />
                     <div className="flex justify-end mt-2">
-                      <button
-                        type="submit"
+                  <button 
+                    type="submit"
                         disabled={submittingComment || !newComment.trim()}
                         className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
-                      >
+                  >
                         {submittingComment ? 'Posting...' : 'Post Comment'}
-                      </button>
-                    </div>
-                  </div>
+                  </button>
                 </div>
-              </form>
+              </div>
+            </div>
+          </form>
             ) : (
               <div className="mb-8 p-4 bg-gray-50 rounded-lg text-center">
                 <p className="text-gray-600 mb-2">Please log in to leave a comment.</p>
@@ -397,37 +397,37 @@ const PostDetail = () => {
               </div>
             )}
 
-            {/* Comments List */}
-            <div className="space-y-6">
-              {comments.map((comment) => (
-                <div key={comment.id} className="flex space-x-4">
+          {/* Comments List */}
+          <div className="space-y-6">
+            {comments.map((comment) => (
+              <div key={comment.id} className="flex space-x-4">
                   <img 
                     src={comment.author.photoURL || "https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-1.2.1"} 
                     alt={comment.author.fullName} 
                     className="h-10 w-10 rounded-full" 
                   />
-                  <div className="flex-1">
+                <div className="flex-1">
                     <div className="bg-white rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-2">
                         <span className="font-medium text-gray-900">
                           {comment.author.fullName || comment.author.username}
                         </span>
                         <span className="text-sm text-gray-500">
                           {formatRelativeTime(comment.createdAt)}
                         </span>
-                      </div>
-                      <p className="text-gray-700">{comment.content}</p>
                     </div>
+                    <p className="text-gray-700">{comment.content}</p>
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
               
               {comments.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <p>No comments yet. Be the first to comment!</p>
                 </div>
               )}
-            </div>
+                </div>
           </div>
         )}
       </article>
